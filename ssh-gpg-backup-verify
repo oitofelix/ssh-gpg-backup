@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+#
+# Copyright (C) 2020 Bruno Félix Rezende Ribeiro <oitofelix@gnu.org>
+#
+# Copying and distribution of this file, with or without modification,
+# are permitted in any medium without royalty provided the copyright
+# notice and this notice are preserved.  This file is offered as-is,
+# without any warranty.
+
+set -o errexit
+
+function depends
+for cmd in "$@"; do
+    if ! which "$cmd" >/dev/null; then
+	echo "Command '$cmd' is required.  Please, install it."
+	exit 1
+    fi
+done
+
+function usage
+{
+    echo "\
+Usage: $0 HOST
+
+Verify integrity of incremental backup made by ssh-gpg-backup.
+
+The XZ-compressed, GPG-encrypted (Tar-archived) backup and its SNAR
+snapshot file are expected inside the local directory HOST/, relative
+to the current working directory.
+
+Decryption, decompression and archive checkup are all performed on the
+local host.  No remote communication is attempted.
+
+This program asks for the GPG passphrase before starting its actual
+work." 1>&2
+}
+
+depends tar unxz gpg
+
+trap usage EXIT
+
+: ${1:?Host name not defined}
+
+trap EXIT
+
+host=$1
+
+read -r \
+     -p 'GPG encryption.  Enter passphrase: ' \
+     -s passphrase
+echo
+
+for backup_file in "$host"/*.tar.xz.gpg; do
+    gpg --batch \
+	--passphrase-file=<(cat <<<"$passphrase") \
+	--decrypt \
+	--quiet \
+	"$backup_file" |
+	unxz |
+	tar --verbose \
+	    --verbose \
+	    --list \
+	    --incremental
+done

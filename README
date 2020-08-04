@@ -1,0 +1,29 @@
+ssh-gpg-backup
+==============
+
+This package is intended for incrementally tar-archiving,
+xz-compressing and GPG-encrypting entire remote root file systems
+through SSH.  Therefore, this is a simple incremental remote backup
+solution using standard GNU tools.
+
+Three scripts are provided for backup, verification and restoration:
+ssh-gpg-backup, ssh-gpg-backup-verify, ssh-gpg-backup-restore,
+respectively.
+
+The direct dependencies of this package are:
+
+  - GNU Bash (https://www.gnu.org/software/bash/);
+  - GNU tar (https://www.gnu.org/software/tar/);
+  - XZ Utils (http://tukaani.org/xz/);
+  - GnuPG (https://gnupg.org/);
+  - SSH (https://www.openssh.com/).
+
+Only GNU tar is needed on the remote end, though.
+
+--
+Copyright (C) 2020 Bruno Félix Rezende Ribeiro <oitofelix@gnu.org>
+
+  Copying and distribution of this file, with or without modification,
+  are permitted in any medium without royalty provided the copyright
+  notice and this notice are preserved.  This file is offered as-is,
+  without any warranty.

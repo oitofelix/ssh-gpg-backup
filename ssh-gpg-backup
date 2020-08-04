@@ -1,0 +1,127 @@
+#!/usr/bin/env bash
+#
+# Copyright (C) 2020 Bruno Félix Rezende Ribeiro <oitofelix@gnu.org>
+#
+# Copying and distribution of this file, with or without modification,
+# are permitted in any medium without royalty provided the copyright
+# notice and this notice are preserved.  This file is offered as-is,
+# without any warranty.
+
+set -o errexit
+
+function depends
+for cmd in "$@"; do
+    if ! which "$cmd" >/dev/null; then
+	echo "Command '$cmd' is required.  Please, install it."
+	exit 1
+    fi
+done
+
+function usage
+{
+    echo "\
+Usage: $0 [USER@]HOST
+
+Incrementally backup entire root file system of HOST using USER SSH
+access.
+
+The (Tar-archived) backup and its SNAR snapshot file are XZ-compressed
+and GPG-encrypted inside the local directory HOST/, relative to the
+current working directory.
+
+GNU Tar is used on the remote host to archive the backup before
+sending it over the network, and therefore must be available in its
+PATH.  Compression and encryption are performed on the local side.
+
+Naturally, in case a previously made incremental backup (alongside its
+'snapshot.snar.xz.gpg' file) is present in the aforementioned
+destination directory, a higher level backup will be made.
+
+This program asks for the GPG passphrase before starting its actual
+work." 1>&2
+}
+
+function ssh_bash
+{
+    ssh "$user_host" \
+	bash --noprofile --norc
+}
+
+function ssh_bash_xz_gpg
+{
+    ssh_bash |
+	xz |
+	gpg --batch \
+	    --passphrase-file=<(cat <<<"$passphrase") \
+	    --symmetric \
+	    --quiet
+}
+
+depends ssh xz gpg
+
+trap usage EXIT
+
+: ${1:?Host name not defined}
+
+trap EXIT
+
+read -r \
+     -p 'GPG encryption.  Enter passphrase: ' \
+     -s passphrase
+echo
+
+user_host=$1
+host=${user_host#@}
+backup_dir=$host
+mkdir --parents "$backup_dir"
+local_snar_file=$backup_dir/snapshot.snar.xz.gpg
+remote_snar_file=$(ssh_bash <<<'mktemp --suffix=.snar')
+
+if [[ -f $local_snar_file ]]; then
+    gpg --batch \
+	--passphrase-file=<(cat <<<"$passphrase") \
+	--decrypt \
+	--quiet \
+	"$local_snar_file" |
+	unxz |
+	ssh "$user_host" "cat > '$remote_snar_file'"
+fi
+
+ssh_bash_xz_gpg <<EOF >"$backup_dir/$(date -Iseconds)".tar.xz.gpg
+set -e
+if which gtar; then
+   tar=gtar
+else
+   tar=tar
+fi
+if which doas; then
+   rootdo=doas
+else
+   rootdo=sudo
+fi
+\$rootdo \$tar \
+  --verbose \
+  --create \
+  --exclude=\*/.cache \
+  --exclude=\*/cache \
+  --exclude=\*/Cache \
+  --exclude=\*/__pycache__ \
+  --exclude=\*/Trash \
+  --exclude=/home/.ecryptfs \
+  --exclude=/proc \
+  --exclude=/sys \
+  --exclude=/tmp \
+  --exclude=/run \
+  --exclude=/media \
+  --exclude=/mnt \
+  --exclude=/var/cache \
+  --exclude=/var/crash \
+  --exclude=/var/lock \
+  --exclude=/var/log \
+  --exclude=/var/run \
+  --exclude=/var/tmp \
+  --listed-incremental="$remote_snar_file" \
+  /
+EOF
+
+ssh_bash_xz_gpg <<<"cat '$remote_snar_file'" >"$local_snar_file"

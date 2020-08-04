@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+#
+# Copyright (C) 2020 Bruno Félix Rezende Ribeiro <oitofelix@gnu.org>
+#
+# Copying and distribution of this file, with or without modification,
+# are permitted in any medium without royalty provided the copyright
+# notice and this notice are preserved.  This file is offered as-is,
+# without any warranty.
+
+set -o errexit
+
+function depends
+for cmd in "$@"; do
+    if ! which "$cmd" >/dev/null; then
+	echo "Command '$cmd' is required.  Please, install it."
+	exit 1
+    fi
+done
+
+depends ssh unxz gpg
+
+function usage
+{
+    echo "\
+Usage: $0 [USER@]HOST
+
+Restore incremental backup made by ssh-gpg-backup.
+
+The XZ-compressed, GPG-encrypted (Tar-archived) backup and its SNAR
+snapshot file are expected inside the local directory HOST/, relative
+to the current working directory.
+
+GNU Tar is used on the remote host to extract the backup archive sent
+over the network, and therefore must be available in its PATH.
+Decryption and decompression are performed on the local side.
+
+This program asks for the GPG passphrase before starting its actual
+work." 1>&2
+}
+
+trap usage EXIT
+
+: ${1:?Host name not defined}
+
+trap EXIT
+
+user_host=$1
+host=${user_host#@}
+
+read -r \
+     -p 'GPG encryption.  Enter passphrase: ' \
+     -s passphrase
+echo
+
+for backup_file in "$host"/*.tar.xz.gpg; do
+    gpg --batch \
+	--passphrase-file=<(cat <<<"$passphrase") \
+	--decrypt \
+	--quiet \
+	"$backup_file" |
+	unxz |
+	ssh "$user_host" \
+	    tar \
+	    --verbose \
+	    --directory=/ \
+	    --extract \
+	    --incremental
+done
