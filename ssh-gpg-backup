@@ -120,6 +120,7 @@ fi
   --exclude=/var/log \
   --exclude=/var/run \
   --exclude=/var/tmp \
+  --one-file-system \
   --listed-incremental="$remote_snar_file" \
   /
 EOF
