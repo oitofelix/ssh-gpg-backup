@@ -20,10 +20,13 @@ done
 function usage
 {
     echo "\
-Usage: $0 [USER@]HOST
+Usage: $0 [USER@]HOST [REMOTE-ROOT-DIR]
 
-Incrementally backup entire root file system of HOST using USER SSH
-access.
+Incrementally backup entire directory tree underneath HOST's
+REMOTE-ROOT-DIR using USER's SSH access.
+
+USER defaults to the current user.  REMOTE-ROOT-DIR defaults to /, but
+one might be interested in using just /home/USER, for example.
 
 The (Tar-archived) backup and its SNAR snapshot file are XZ-compressed
 and GPG-encrypted inside the local directory HOST/, relative to the
@@ -72,6 +75,7 @@ echo
 
 user_host=$1
 host=${user_host#@}
+remote_root_dir=${2:-/}
 backup_dir=$host
 mkdir --parents "$backup_dir"
 local_snar_file=$backup_dir/snapshot.snar.xz.gpg
@@ -121,8 +125,8 @@ fi
   --exclude=/var/run \
   --exclude=/var/tmp \
   --one-file-system \
-  --listed-incremental="$remote_snar_file" \
-  /
+  --listed-incremental='$remote_snar_file' \
+  '${remote_root_dir}'
 EOF
 
 ssh_bash_xz_gpg <<<"cat '$remote_snar_file'" >"$local_snar_file"
