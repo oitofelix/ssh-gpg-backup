@@ -24,7 +24,7 @@ Usage: $0 HOST
 
 Verify integrity of incremental backup made by ssh-gpg-backup.
 
-The XZ-compressed, GPG-encrypted (Tar-archived) backup and its SNAR
+The Gzip-compressed, GPG-encrypted (Tar-archived) backup and its SNAR
 snapshot file are expected inside the local directory HOST/, relative
 to the current working directory.
 
@@ -35,7 +35,7 @@ This program asks for the GPG passphrase before starting its actual
 work." 1>&2
 }
 
-depends tar unxz gpg
+depends tar gunzip gpg
 
 trap usage EXIT
 
@@ -50,13 +50,13 @@ read -r \
      -s passphrase
 echo
 
-for backup_file in "$host"/*.tar.xz.gpg; do
+for backup_file in "$host"/*.tar.gz.gpg; do
     gpg --batch \
 	--passphrase-file=<(cat <<<"$passphrase") \
 	--decrypt \
 	--quiet \
 	"$backup_file" |
-	unxz |
+	gunzip |
 	tar --verbose \
 	    --verbose \
 	    --list \

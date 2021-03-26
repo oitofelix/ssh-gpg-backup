@@ -28,7 +28,7 @@ REMOTE-ROOT-DIR using USER's SSH access.
 USER defaults to the current user.  REMOTE-ROOT-DIR defaults to /, but
 one might be interested in using just /home/USER, for example.
 
-The (Tar-archived) backup and its SNAR snapshot file are XZ-compressed
+The (Tar-archived) backup and its SNAR snapshot file are Gzip-compressed
 and GPG-encrypted inside the local directory HOST/, relative to the
 current working directory.
 
@@ -37,7 +37,7 @@ sending it over the network, and therefore must be available in its
 PATH.  Compression and encryption are performed on the local side.
 
 Naturally, in case a previously made incremental backup (alongside its
-'snapshot.snar.xz.gpg' file) is present in the aforementioned
+'snapshot.snar.gz.gpg' file) is present in the aforementioned
 destination directory, a higher level backup will be made.
 
 This program asks for the GPG passphrase before starting its actual
@@ -50,17 +50,17 @@ function ssh_bash
 	bash --noprofile --norc
 }
 
-function ssh_bash_xz_gpg
+function ssh_bash_gz_gpg
 {
     ssh_bash |
-	xz |
+	gzip |
 	gpg --batch \
 	    --passphrase-file=<(cat <<<"$passphrase") \
 	    --symmetric \
 	    --quiet
 }
 
-depends ssh xz gpg
+depends ssh gzip gunzip gpg
 
 trap usage EXIT
 
@@ -78,7 +78,7 @@ host=${user_host#@}
 remote_root_dir=${2:-/}
 backup_dir=$host
 mkdir --parents "$backup_dir"
-local_snar_file=$backup_dir/snapshot.snar.xz.gpg
+local_snar_file=$backup_dir/snapshot.snar.gz.gpg
 remote_snar_file=$(ssh_bash <<<'mktemp --suffix=.snar')
 
 if [[ -f $local_snar_file ]]; then
@@ -87,11 +87,11 @@ if [[ -f $local_snar_file ]]; then
 	--decrypt \
 	--quiet \
 	"$local_snar_file" |
-	unxz |
+	gunzip |
 	ssh "$user_host" "cat > '$remote_snar_file'"
 fi
 
-ssh_bash_xz_gpg <<EOF >"$backup_dir/$(date -Iseconds)".tar.xz.gpg
+ssh_bash_gz_gpg <<EOF >"$backup_dir/$(date -Iseconds)".tar.gz.gpg
 set -e
 if which gtar; then
    tar=gtar
@@ -129,4 +129,4 @@ fi
   '${remote_root_dir}'
 EOF
 
-ssh_bash_xz_gpg <<<"cat '$remote_snar_file'" >"$local_snar_file"
+ssh_bash_gz_gpg <<<"cat '$remote_snar_file'" >"$local_snar_file"
