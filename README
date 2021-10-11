@@ -1,10 +1,10 @@
 ssh-gpg-backup
 ==============
 
-This package is intended for incrementally Tar-archiving,
-Gzip-compressing and GPG-encrypting entire remote root file systems
-through SSH.  Therefore, this is a simple incremental remote backup
-solution using standard GNU tools.
+This package is intended for Tar-archiving, Gzip-compressing and
+GPG-encrypting entire remote root file systems through SSH.
+Therefore, this is a simple remote backup solution using standard GNU
+tools.
 
 Three scripts are provided for backup, verification and restoration:
 ssh-gpg-backup, ssh-gpg-backup-verify, ssh-gpg-backup-restore,

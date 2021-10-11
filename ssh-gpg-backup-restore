@@ -12,8 +12,8 @@ set -o errexit
 function depends
 for cmd in "$@"; do
     if ! which "$cmd" >/dev/null; then
-	echo "Command '$cmd' is required.  Please, install it."
-	exit 1
+	      echo "Command '$cmd' is required.  Please, install it."
+	      exit 1
     fi
 done
 
@@ -24,11 +24,11 @@ function usage
     echo "\
 Usage: $0 [USER@]HOST
 
-Restore incremental backup made by ssh-gpg-backup.
+Restore backup made by ssh-gpg-backup.
 
-The Gzip-compressed, GPG-encrypted (Tar-archived) backup and its SNAR
-snapshot file are expected inside the local directory HOST/, relative
-to the current working directory.
+The Gzip-compressed, GPG-encrypted (Tar-archived) backup file is
+expected inside the local directory HOST/, relative to the current
+working directory.
 
 GNU Tar is used on the remote host to extract the backup archive sent
 over the network, and therefore must be available in its PATH.
@@ -45,7 +45,7 @@ trap usage EXIT
 trap EXIT
 
 user_host=$1
-host=${user_host#@}
+host=${user_host#*@}
 
 read -r \
      -p 'GPG encryption.  Enter passphrase: ' \
@@ -54,15 +54,14 @@ echo
 
 for backup_file in "$host"/*.tar.gz.gpg; do
     gpg --batch \
-	--passphrase-file=<(cat <<<"$passphrase") \
-	--decrypt \
-	--quiet \
-	"$backup_file" |
-	gunzip |
-	ssh "$user_host" \
-	    tar \
-	    --verbose \
-	    --directory=/ \
-	    --extract \
-	    --incremental
+	      --passphrase-file=<(cat <<<"$passphrase") \
+	      --decrypt \
+	      --quiet \
+	      "$backup_file" |
+	      gunzip |
+	      ssh "$user_host" \
+	          tar \
+	          --verbose \
+	          --directory=/ \
+	          --extract
 done
