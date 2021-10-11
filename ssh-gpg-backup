@@ -74,7 +74,7 @@ read -r \
 echo
 
 user_host=$1
-host=${user_host#@}
+host=${user_host#*@}
 remote_root_dir=${2:-/}
 backup_dir=$host
 mkdir --parents "$backup_dir"
