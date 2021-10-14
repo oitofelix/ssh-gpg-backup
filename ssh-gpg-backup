@@ -47,6 +47,6 @@ ssh "$src_user@$src_host" \
     "$src_path" |
     gzip |
     gpg --symmetric \
-	      --quiet |
+        --quiet |
     ssh "$bkp_user@$bkp_host" \
         tee "$bkp_archive" > /dev/null

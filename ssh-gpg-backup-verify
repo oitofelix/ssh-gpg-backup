@@ -37,6 +37,6 @@ bkp_archive=$3
 ssh "$bkp_user@$bkp_host" \
     cat "$bkp_archive" |
     gpg --decrypt \
-	      --quiet |
-	  gunzip |
-	  tar vvt
+        --quiet |
+    gunzip |
+    tar vvt

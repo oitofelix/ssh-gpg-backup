@@ -47,9 +47,9 @@ rst_path=$7
 ssh "$bkp_user@$bkp_host" \
     cat "$bkp_archive" |
     gpg --decrypt \
-	      --quiet |
-	  gunzip |
-	  ssh "$rst_user@$rst_host" \
+        --quiet |
+    gunzip |
+    ssh "$rst_user@$rst_host" \
         tar vvxf - \
         -C "$rst_path" \
         "$bkp_path"
