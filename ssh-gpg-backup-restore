@@ -13,8 +13,9 @@ function usage
 {
     echo "Usage: $(basename $0) BKP_USER BKP_HOST BKP_ARCHIVE BKP_PATH RST_USER RST_HOST RST_PATH
 
-Restore BKP_PATH residing within BKP_ARCHIVE stored in BKP_HOST as
-BKP_USER to RST_PATH within RST_HOST as RST_USER.
+Restore BKP_PATH residing within Tar-archived, Gzip-compressed and
+GPG-encrypted BKP_ARCHIVE stored in BKP_HOST as BKP_USER to RST_PATH
+within RST_HOST as RST_USER.
 
 Tar is used on RST_HOST to extract the backup archive sent to it
 through SSH.  Decryption and decompression are performed on the local
