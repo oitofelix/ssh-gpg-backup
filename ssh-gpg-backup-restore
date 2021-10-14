@@ -1,67 +1,54 @@
 #!/usr/bin/env bash
 #
-# Copyright (C) 2020 Bruno Félix Rezende Ribeiro <oitofelix@gnu.org>
+# Copyright (C) Bruno Félix Rezende Ribeiro <oitofelix@gnu.org>
 #
 # Copying and distribution of this file, with or without modification,
 # are permitted in any medium without royalty provided the copyright
 # notice and this notice are preserved.  This file is offered as-is,
 # without any warranty.
 
-set -o errexit
-
-function depends
-for cmd in "$@"; do
-    if ! which "$cmd" >/dev/null; then
-	      echo "Command '$cmd' is required.  Please, install it."
-	      exit 1
-    fi
-done
-
-depends ssh gunzip gpg
+set -o errexit -o pipefail
 
 function usage
 {
-    echo "\
-Usage: $0 [USER@]HOST
+    echo "Usage: $(basename $0) BKP_USER BKP_HOST BKP_ARCHIVE BKP_PATH RST_USER RST_HOST RST_PATH
 
-Restore backup made by ssh-gpg-backup.
+Restore BKP_PATH residing within BKP_ARCHIVE stored in BKP_HOST as
+BKP_USER to RST_PATH within RST_HOST as RST_USER.
 
-The Gzip-compressed, GPG-encrypted (Tar-archived) backup file is
-expected inside the local directory HOST/, relative to the current
-working directory.
+Tar is used on RST_HOST to extract the backup archive sent to it
+through SSH.  Decryption and decompression are performed on the local
+host.
 
-GNU Tar is used on the remote host to extract the backup archive sent
-over the network, and therefore must be available in its PATH.
-Decryption and decompression are performed on the local side.
-
-This program asks for the GPG passphrase before starting its actual
-work." 1>&2
+Hint: BKP_HOST and/or RST_HOST may be the same host and/or localhost." 1>&2
 }
 
 trap usage EXIT
 
-: ${1:?Host name not defined}
+: ${1:?BKP_USER argument not given}
+: ${2:?BKP_HOST argument not given}
+: ${3:?BKP_ARCHIVE argument not given}
+: ${4:?BKP_PATH argument not given}
+: ${5:?RST_USER argument not given}
+: ${6:?RST_HOST argument not given}
+: ${7:?RST_PATH argument not given}
 
 trap EXIT
 
-user_host=$1
-host=${user_host#*@}
+bkp_user=$1
+bkp_host=$2
+bkp_archive=$3
+bkp_path=$4
+rst_user=$5
+rst_host=$6
+rst_path=$7
 
-read -r \
-     -p 'GPG encryption.  Enter passphrase: ' \
-     -s passphrase
-echo
-
-for backup_file in "$host"/*.tar.gz.gpg; do
-    gpg --batch \
-	      --passphrase-file=<(cat <<<"$passphrase") \
-	      --decrypt \
-	      --quiet \
-	      "$backup_file" |
-	      gunzip |
-	      ssh "$user_host" \
-	          tar \
-	          --verbose \
-	          --directory=/ \
-	          --extract
-done
+ssh "$bkp_user@$bkp_host" \
+    cat "$bkp_archive" |
+    gpg --decrypt \
+	      --quiet |
+	  gunzip |
+	  ssh "$rst_user@$rst_host" \
+        tar vvxf - \
+        -C "$rst_path" \
+        "$bkp_path"

@@ -1,113 +1,52 @@
 #!/usr/bin/env bash
 #
-# Copyright (C) 2020 Bruno Félix Rezende Ribeiro <oitofelix@gnu.org>
+# Copyright (C) Bruno Félix Rezende Ribeiro <oitofelix@gnu.org>
 #
 # Copying and distribution of this file, with or without modification,
 # are permitted in any medium without royalty provided the copyright
 # notice and this notice are preserved.  This file is offered as-is,
 # without any warranty.
 
-set -o errexit
-
-function depends
-for cmd in "$@"; do
-    if ! which "$cmd" >/dev/null; then
-	      echo "Command '$cmd' is required.  Please, install it."
-	      exit 1
-    fi
-done
+set -o errexit -o pipefail
 
 function usage
 {
-    echo "\
-Usage: $0 [USER@]HOST [REMOTE-ROOT-DIR]
+    echo "Usage: $(basename $0) SRC_USER SRC_HOST SRC_PATH BKP_USER BKP_HOST BKP_ARCHIVE
 
-Backup entire directory tree underneath HOST's REMOTE-ROOT-DIR using
-USER's SSH access.
+Backup SRC_PATH from SRC_HOST as SRC_USER into Tar-archived,
+Gzip-compressed and GPG-encrypted BKP_ARCHIVE within BKP_HOST as
+BKP_USER.
 
-USER defaults to the current user.  REMOTE-ROOT-DIR defaults to /, but
-one might be interested in using just /home/USER, for example.
+Tar is used on SRC_HOST to archive the backup before sending it
+through SSH to BKP_HOST.  Compression and encryption are performed on
+the local host.
 
-The (Tar-archived) backup file is Gzip-compressed and GPG-encrypted
-inside the local directory HOST/, relative to the current working
-directory.
-
-GNU Tar is used on the remote host to archive the backup before
-sending it over the network, and therefore must be available in its
-PATH.  Compression and encryption are performed on the local side.
-
-This program asks for the GPG passphrase before starting its actual
-work." 1>&2
+Hint: SRC_HOST and/or BKP_HOST may be the same host and/or localhost." 1>&2
 }
-
-function ssh_bash
-{
-    ssh "$user_host" \
-	      bash --noprofile --norc
-}
-
-function ssh_bash_gz_gpg
-{
-    ssh_bash |
-	      gzip |
-	      gpg --batch \
-	          --passphrase-file=<(cat <<<"$passphrase") \
-	          --symmetric \
-	          --quiet
-}
-
-depends ssh gzip gunzip gpg
 
 trap usage EXIT
 
-: ${1:?Host name not defined}
+: ${1:?SRC_USER argument not given}
+: ${2:?SRC_HOST argument not given}
+: ${3:?SRC_PATH argument not given}
+: ${4:?BKP_USER argument not given}
+: ${5:?BKP_HOST argument not given}
+: ${6:?BKP_ARCHIVE argument not given}
 
 trap EXIT
 
-read -r \
-     -p 'GPG encryption.  Enter passphrase: ' \
-     -s passphrase
-echo
+src_user=$1
+src_host=$2
+src_path=$3
+bkp_user=$4
+bkp_host=$5
+bkp_archive=$6
 
-user_host=$1
-host=${user_host#*@}
-remote_root_dir=${2:-/}
-backup_dir=$host
-mkdir --parents "$backup_dir"
-
-ssh_bash_gz_gpg <<EOF >"$backup_dir/$(date -Iseconds)".tar.gz.gpg
-set -e
-if which gtar; then
-   tar=gtar
-else
-   tar=tar
-fi
-if which doas; then
-   rootdo=doas
-else
-   rootdo=sudo
-fi
-\$rootdo \$tar \
-  --verbose \
-  --create \
-  --exclude=\*/.cache \
-  --exclude=\*/cache \
-  --exclude=\*/Cache \
-  --exclude=\*/__pycache__ \
-  --exclude=\*/Trash \
-  --exclude=/home/.ecryptfs \
-  --exclude=/proc \
-  --exclude=/sys \
-  --exclude=/tmp \
-  --exclude=/run \
-  --exclude=/media \
-  --exclude=/mnt \
-  --exclude=/var/cache \
-  --exclude=/var/crash \
-  --exclude=/var/lock \
-  --exclude=/var/log \
-  --exclude=/var/run \
-  --exclude=/var/tmp \
-  --one-file-system \
-  '${remote_root_dir}'
-EOF
+ssh "$src_user@$src_host" \
+    tar vvcf - \
+    "$src_path" |
+    gzip |
+    gpg --symmetric \
+	      --quiet |
+    ssh "$bkp_user@$bkp_host" \
+        tee "$bkp_archive" > /dev/null

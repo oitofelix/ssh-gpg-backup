@@ -1,27 +1,74 @@
 ssh-gpg-backup
 ==============
 
-This package is intended for Tar-archiving, Gzip-compressing and
-GPG-encrypting entire remote root file systems through SSH.
-Therefore, this is a simple remote backup solution using standard GNU
-tools.
+This package is intended for creation, verification and restoration of
+Tar-archived, Gzip-compressed and GPG-encrypted backups between remote
+hosts through SSH.  Therefore, this is a simple and general remote
+backup solution using standard GNU tools.
 
-Three scripts are provided for backup, verification and restoration:
-ssh-gpg-backup, ssh-gpg-backup-verify, ssh-gpg-backup-restore,
-respectively.
+Three scripts are provided for creation, verification and restoration
+of backup files: ssh-gpg-backup, ssh-gpg-backup-verify and
+ssh-gpg-backup-restore.
 
 The direct dependencies of this package are:
 
-  - GNU Bash (https://www.gnu.org/software/bash/);
-  - GNU tar (https://www.gnu.org/software/tar/);
+  - GNU Bash (http://www.gnu.org/software/bash/);
+  - GNU Coreutils (http://www.gnu.org/software/coreutils/);
+  - GNU Tar (http://www.gnu.org/software/tar/);
   - GNU Gzip (http://www.gnu.org/software/gzip/);
-  - GnuPG (https://gnupg.org/);
+  - GNU Privacy Guard (http://www.gnu.org/software/gnupg/);
   - SSH (https://www.openssh.com/).
 
-Only GNU tar is needed on the remote end, though.
+Only a mostly POSIX-compliant Tar is needed on the remote end, though.
+
+
+ssh-gpg-backup
+--------------
+
+Usage: ssh-gpg-backup SRC_USER SRC_HOST SRC_PATH BKP_USER BKP_HOST BKP_ARCHIVE
+
+Backup SRC_PATH from SRC_HOST as SRC_USER into Tar-archived,
+Gzip-compressed and GPG-encrypted BKP_ARCHIVE within BKP_HOST as
+BKP_USER.
+
+Tar is used on SRC_HOST to archive the backup before sending it
+through SSH to BKP_HOST.  Compression and encryption are performed on
+the local host.
+
+Hint: SRC_HOST and/or BKP_HOST may be the same host and/or localhost.
+
+
+ssh-gpg-backup-verify
+---------------------
+
+Usage: $(basename $0) BKP_USER BKP_HOST BKP_ARCHIVE
+
+Verify integrity of Tar-archived, Gzip-compressed and GPG-encrypted
+BKP_ARCHIVE within BKP_HOST as BKP_USER.
+
+Decryption, decompression and archive verification are all performed
+on the local host.
+
+Hint: BKP_HOST may be localhost.
+
+
+ssh-gpg-backup-restore
+----------------------
+
+Usage: ssh-gpg-backup-verify BKP_USER BKP_HOST BKP_ARCHIVE BKP_PATH RST_USER RST_HOST RST_PATH
+
+Restore BKP_PATH residing within BKP_ARCHIVE stored in BKP_HOST as
+BKP_USER to RST_PATH within RST_HOST as RST_USER.
+
+Tar is used on RST_HOST to extract the backup archive sent to it
+through SSH.  Decryption and decompression are performed on the local
+host.
+
+Hint: BKP_HOST and/or RST_HOST may be the same host and/or localhost.
+
 
 --
-Copyright (C) 2020 Bruno Félix Rezende Ribeiro <oitofelix@gnu.org>
+Copyright (C) Bruno Félix Rezende Ribeiro <oitofelix@gnu.org>
 
   Copying and distribution of this file, with or without modification,
   are permitted in any medium without royalty provided the copyright

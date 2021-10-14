@@ -1,63 +1,42 @@
 #!/usr/bin/env bash
 #
-# Copyright (C) 2020 Bruno Félix Rezende Ribeiro <oitofelix@gnu.org>
+# Copyright (C) Bruno Félix Rezende Ribeiro <oitofelix@gnu.org>
 #
 # Copying and distribution of this file, with or without modification,
 # are permitted in any medium without royalty provided the copyright
 # notice and this notice are preserved.  This file is offered as-is,
 # without any warranty.
 
-set -o errexit
-
-function depends
-for cmd in "$@"; do
-    if ! which "$cmd" >/dev/null; then
-	echo "Command '$cmd' is required.  Please, install it."
-	exit 1
-    fi
-done
+set -o errexit -o pipefail
 
 function usage
 {
-    echo "\
-Usage: $0 HOST
+    echo "Usage: $(basename $0) BKP_USER BKP_HOST BKP_ARCHIVE
 
-Verify integrity of backup made by ssh-gpg-backup.
+Verify integrity of Tar-archived, Gzip-compressed and GPG-encrypted
+BKP_ARCHIVE within BKP_HOST as BKP_USER.
 
-The Gzip-compressed, GPG-encrypted (Tar-archived) backup file is
-expected inside the local directory HOST/, relative to the current
-working directory.
+Decryption, decompression and archive verification are all performed
+on the local host.
 
-Decryption, decompression and archive checkup are all performed on the
-local host.  No remote communication is attempted.
-
-This program asks for the GPG passphrase before starting its actual
-work." 1>&2
+Hint: BKP_HOST may be localhost." 1>&2
 }
-
-depends tar gunzip gpg
 
 trap usage EXIT
 
-: ${1:?Host name not defined}
+: ${1:?BKP_USER argument not given}
+: ${2:?BKP_HOST argument not given}
+: ${3:?BKP_ARCHIVE argument not given}
 
 trap EXIT
 
-host=$1
+bkp_user=$1
+bkp_host=$2
+bkp_archive=$3
 
-read -r \
-     -p 'GPG encryption.  Enter passphrase: ' \
-     -s passphrase
-echo
-
-for backup_file in "$host"/*.tar.gz.gpg; do
-    gpg --batch \
-	--passphrase-file=<(cat <<<"$passphrase") \
-	--decrypt \
-	--quiet \
-	"$backup_file" |
-	gunzip |
-	tar --verbose \
-	    --verbose \
-	    --list
-done
+ssh "$bkp_user@$bkp_host" \
+    cat "$bkp_archive" |
+    gpg --decrypt \
+	      --quiet |
+	  gunzip |
+	  tar vvt
