@@ -43,10 +43,11 @@ bkp_host=$5
 bkp_archive=$6
 
 ssh "$src_user@$src_host" \
-    tar vvcf - \
-    "$src_path" |
+    "$(printf 'tar vvcf - %q' \
+              "$src_path")" |
     gzip |
     gpg --symmetric \
         --quiet |
     ssh "$bkp_user@$bkp_host" \
-        tee "$bkp_archive" > /dev/null
+        "$(printf 'tee %q' \
+                  "$bkp_archive")" > /dev/null

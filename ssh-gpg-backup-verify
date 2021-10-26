@@ -35,7 +35,8 @@ bkp_host=$2
 bkp_archive=$3
 
 ssh "$bkp_user@$bkp_host" \
-    cat "$bkp_archive" |
+    "$(printf 'cat %q' \
+              "$bkp_archive")" |
     gpg --decrypt \
         --quiet |
     gunzip |

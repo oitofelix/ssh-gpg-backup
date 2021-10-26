@@ -45,11 +45,12 @@ rst_host=$6
 rst_path=$7
 
 ssh "$bkp_user@$bkp_host" \
-    cat "$bkp_archive" |
+    "$(printf 'cat %q' \
+              "$bkp_archive")" |
     gpg --decrypt \
         --quiet |
     gunzip |
     ssh "$rst_user@$rst_host" \
-        tar vvxf - \
-        -C "$rst_path" \
-        "$bkp_path"
+        "$(printf 'tar vvxf - -C %q %q' \
+                  "$rst_path" \
+                  "$bkp_path")"
